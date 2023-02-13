@@ -1,8 +1,8 @@
 version: "3"
 services:
   test-task:
-    image: lexman1998/test-task
-    container_name: test-task
+    image: lexman1998/test-task:latest
+    container_name: test
     ports:
       - 8080:8080
     build: /
