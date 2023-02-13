@@ -1,6 +1,7 @@
 version: "3"
 services:
   test-task:
+    image: lexman1998/test-task
     container_name: test-task
     ports:
       - 8080:8080
