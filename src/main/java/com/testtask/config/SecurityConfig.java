@@ -15,9 +15,6 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
-
-
-
     private final JpaUserDetailService jpaUserDetailService;
 
     public SecurityConfig(JpaUserDetailService jpaUserDetailService) {
@@ -33,6 +30,7 @@ public class SecurityConfig {
                 .antMatchers("/h2-console/**").permitAll()
                 .antMatchers(HttpMethod.GET,"/api/**").permitAll()
                 .antMatchers(HttpMethod.POST,"/api/v1/users").permitAll()
+                .antMatchers("/").permitAll()
                 .anyRequest().authenticated()
                 .and()
                 .userDetailsService(jpaUserDetailService)

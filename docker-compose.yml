@@ -1,0 +1,8 @@
+version: "3"
+services:
+  test-task:
+    container_name: test-task
+    ports:
+      - 8080:8080
+    build: /
+
