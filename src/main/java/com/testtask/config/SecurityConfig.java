@@ -27,43 +27,12 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity)
             throws Exception {
-
-/*        httpSecurity.authorizeRequests()
-                .antMatchers("/h2-console/**").permitAll()
-                .antMatchers("/api/**").permitAll()
-                .anyRequest()
-                .authenticated();
-
-
-        httpSecurity.csrf()
-                .ignoringAntMatchers("/h2-console/**");
-        httpSecurity.csrf()
-                .ignoringAntMatchers("/api/**");
-        httpSecurity.headers()
-                .frameOptions()
-                .sameOrigin();
-        return httpSecurity.build();*/
-
-
-/*        return httpSecurity
-                .csrf().ignoringAntMatchers("/h2-console/**")
-                .and()
-                .authorizeRequests()
-                .antMatchers("/h2-console/**").permitAll()
-                .anyRequest()
-                .authenticated()
-                .and()
-                .headers().frameOptions().sameOrigin()
-                .and()
-                .formLogin(Customizer.withDefaults())
-                .build();*/
-
         return httpSecurity
-                .csrf().ignoringAntMatchers("/h2-console/**")
-                .and()
+                .csrf().disable()
                 .authorizeRequests()
                 .antMatchers("/h2-console/**").permitAll()
-                .antMatchers("/api/**").permitAll()
+                .antMatchers(HttpMethod.GET,"/api/**").permitAll()
+                .antMatchers(HttpMethod.POST,"/api/v1/users").permitAll()
                 .anyRequest().authenticated()
                 .and()
                 .userDetailsService(jpaUserDetailService)
@@ -71,20 +40,10 @@ public class SecurityConfig {
                 .and()
                 .httpBasic(Customizer.withDefaults())
                 .build();
-
-
-
     }
-
-
-
     @Bean
     PasswordEncoder passwordEncoder(){
         return new BCryptPasswordEncoder(12);
     }
-
-
-
-
 }
 

@@ -1,20 +1,18 @@
 package com.testtask.controller;
 
 import com.testtask.Entity.Quote;
-import com.testtask.Entity.User;
-import com.testtask.Service.OperationService;
+import com.testtask.Service.QuoteRatingService;
 import com.testtask.Service.QuoteService;
 import com.testtask.model.QuoteCreateModel;
 import com.testtask.model.QuoteModel;
-
+import com.testtask.model.VoteModel;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import javax.annotation.PostConstruct;
 import java.time.Instant;
 import java.util.List;
 
@@ -24,61 +22,15 @@ import java.util.List;
 public class QuoteController {
 
     private final QuoteService quoteService;
+    private final QuoteRatingService quoteRatingService;
 
 
-    public QuoteController(QuoteService quoteService) {
+    public QuoteController(QuoteService quoteService, QuoteRatingService quoteRatingService) {
         this.quoteService = quoteService;
-
+        this.quoteRatingService = quoteRatingService;
     }
 
-/*    @PostConstruct
-    public void init() {
-        User user = new User(1L, "user", "user", "user@mail.ru", Instant.now(), Role.USER, Status.ACTIVE);
-        User user2 = new User(2L, "admin", "admin", "admin@mail.ru", Instant.now(), Role.ADMIN, Status.ACTIVE);
-
-        Quote quote1 = Quote.builder()
-                .id(1L)
-                .content("first")
-                .date(Instant.now())
-                .score(0)
-                .user(user)
-                .build();
-
-        Quote quote2 = Quote.builder()
-                .id(2L)
-                .content("test test test")
-                .date(Instant.now())
-                .score(0)
-                .user(user2)
-                .build();
-        Quote quote3 = Quote.builder()
-                .id(3L)
-                .content("3")
-                .date(Instant.now())
-                .score(0)
-                .user(user)
-                .build();
-
-        Quote quote4 = Quote.builder()
-                .id(4L)
-                .content("quote4")
-                .date(Instant.now())
-                .score(0)
-                .user(user2)
-                .build();
-
-
-        quoteService.save(quote1);
-        quoteService.save(quote2);
-        quoteService.save(quote3);
-        quoteService.save(quote4);
-
-    }*/
-
-
     @GetMapping
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
-    //@PreAuthorize("hasAuthority('all:read')")
     public ResponseEntity getAll() {
         try {
             List<QuoteModel> model = quoteService.getAll();
@@ -91,23 +43,19 @@ public class QuoteController {
 
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN','ROLE_USER')")
     public ResponseEntity create(@RequestBody QuoteCreateModel quoteModel) {
-/*        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        log.info(authentication.getName());*/
-
         try {
             Quote quote = Quote.builder()
                     .content(quoteModel.getContent())
                     .date(Instant.now())
                     .score(0)
-                    .user(null)// TODO: 12.02.2023 СПРИНГ СЕКУРИТИ
                     .build();
 
             QuoteModel createdUser = quoteService.save(quote);
             return ResponseEntity.ok(createdUser);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().body(e);
         }
     }
 
@@ -120,17 +68,20 @@ public class QuoteController {
         }
     }
 
+
     @PutMapping("/{id}")
-    public ResponseEntity updateQuote(@PathVariable Long id, @RequestBody Quote quote) {
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN','ROLE_USER')")
+    public ResponseEntity updateQuote(@PathVariable Long id, @RequestBody QuoteCreateModel quoteModel) {
         try {
-            quoteService.update(id, quote);
-            return ResponseEntity.ok(quote);
+            QuoteModel existingQuote = quoteService.update(id, quoteModel);
+            return ResponseEntity.ok(existingQuote);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.toString());
         }
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN','ROLE_USER')")
     public ResponseEntity deleteQuote(@PathVariable Long id) {
         try {
             quoteService.deleteById(id);
@@ -177,8 +128,24 @@ public class QuoteController {
         }
     }
 
-    @GetMapping("/{id}/operations")
+    @GetMapping("/{id}/votes")
     public ResponseEntity getAllOperations(@PathVariable Long id) {
-        return ResponseEntity.ok().body(id);
+        try {
+            QuoteModel quoteModel = quoteService.findById(id);
+            return ResponseEntity.ok().body(quoteModel.getScore());
+        }catch (Exception e){
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/{id}/votes")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN','ROLE_USER')")
+    public ResponseEntity vote(@PathVariable Long id, @RequestBody VoteModel voteModel) {
+        try {
+            quoteRatingService.vote(id, voteModel);
+            return ResponseEntity.ok().body("OK");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }

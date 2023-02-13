@@ -15,11 +15,11 @@ import java.time.Instant;
 @AllArgsConstructor
 @Getter
 @Setter
-public class Operation {
+public class QuoteRating {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String operation; //like, dislike or null(not like and dislike)
+    private Character operation; //+, -, 0(delete row)
     private Instant date;
     private Long userId;
     private Long quoteId;

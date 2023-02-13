@@ -1,11 +1,18 @@
 package com.testtask.Service;
 
 import com.testtask.Entity.Quote;
+import com.testtask.Entity.User;
+import com.testtask.exception.NoPermissionException;
+import com.testtask.model.QuoteCreateModel;
 import com.testtask.model.QuoteModel;
 import com.testtask.repo.QuoteRepo;
+import com.testtask.repo.UserRepo;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import javax.persistence.EntityNotFoundException;
+import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -13,9 +20,11 @@ import java.util.stream.Collectors;
 public class QuoteService {
 
     private final QuoteRepo quoteRepo;
+    private final UserService userService;
 
-    public QuoteService(QuoteRepo quoteRepo) {
+    public QuoteService(QuoteRepo quoteRepo, UserService userService) {
         this.quoteRepo = quoteRepo;
+        this.userService = userService;
     }
 
     public List<QuoteModel> getAll() {
@@ -23,7 +32,10 @@ public class QuoteService {
     }
 
     public QuoteModel save(Quote quote) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
+        User user = userService.findUserByUsername(authentication.getName());
+        quote.setUser(user);
         return toModel(quoteRepo.save(quote));
     }
 
@@ -32,16 +44,27 @@ public class QuoteService {
 
     }
 
-    public void update(Long id, Quote quote) {
+    public QuoteModel update(Long id, QuoteCreateModel quoteModel) {
+
         Quote existingQuote = quoteRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Entity not found"));
-        existingQuote.setContent(quote.getContent());
-        quote.setScore(quote.getScore());
-        quote.setDate(quote.getDate());
+
+        if (!checkPermissions(existingQuote))
+            throw new NoPermissionException("no permissions");
+
+        existingQuote.setContent(quoteModel.getContent());
+        existingQuote.setDate(Instant.now());
         quoteRepo.save(existingQuote);
+        return toModel(existingQuote);
     }
 
     public void deleteById(Long id) {
+        Quote existingQuote = quoteRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Entity not found"));
+
+        if (!checkPermissions(existingQuote))
+            throw new NoPermissionException("no permissions");
+
         quoteRepo.deleteById(id);
     }
 
@@ -76,5 +99,29 @@ public class QuoteService {
                 .date(quote.getDate())
                 .creator(quote.getUser().getUsername())
                 .build();
+    }
+
+    protected Quote toEntity(QuoteModel quoteModel) {
+        User user = userService.findUserByUsername(quoteModel.getCreator());
+        return Quote.builder()
+                .id(quoteModel.getId())
+                .score(quoteModel.getScore())
+                .content(quoteModel.getContent())
+                .date(quoteModel.getDate())
+                .user(user)
+                .build();
+    }
+
+    private boolean checkPermissions(Quote quote) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User quoteOwner = quote.getUser();
+
+        if (authentication.getName().equals(quoteOwner.getUsername()))
+            return true;
+
+        if (authentication.getAuthorities().equals("ROLE_ADMIN"))
+            return true;
+
+        return false;
     }
 }

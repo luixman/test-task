@@ -2,13 +2,18 @@ package com.testtask.Service;
 
 import com.testtask.Entity.User;
 import com.testtask.exception.EmailAlreadyExistsException;
+import com.testtask.exception.NoPermissionException;
 import com.testtask.exception.UsernameAlreadyExistsException;
 import com.testtask.model.UserModel;
 import com.testtask.repo.UserRepo;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import javax.persistence.EntityNotFoundException;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -16,8 +21,11 @@ public class UserService {
 
     private final UserRepo userRepo;
 
-    public UserService(UserRepo userRepo) {
+    private final PasswordEncoder passwordEncoder;
+
+    public UserService(UserRepo userRepo, PasswordEncoder passwordEncoder) {
         this.userRepo = userRepo;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public List<UserModel> findAll() {
@@ -31,6 +39,8 @@ public class UserService {
     }
 
     public UserModel save(User user) {
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+
         if (isUsernameExists(user.getUsername()))
             throw new UsernameAlreadyExistsException("username already exists");
         if (isEmailExists(user.getEmail()))
@@ -40,7 +50,10 @@ public class UserService {
     }
 
     public UserModel update(Long id, User user) {
-        User existingUser = userRepo.findById(id).orElseThrow(()-> new EntityNotFoundException("User not found"));
+        User existingUser = userRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        if (!checkPermissions(existingUser))
+            throw new NoPermissionException("no permissions");
 
         existingUser.setUsername(user.getUsername());
         existingUser.setEmail(user.getEmail());
@@ -53,6 +66,11 @@ public class UserService {
     }
 
     public void deleteById(Long id) {
+        User currentUser = userRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        if (!checkPermissions(currentUser))
+            throw new NoPermissionException("no permissions");
+
         userRepo.deleteById(id);
     }
 
@@ -68,8 +86,24 @@ public class UserService {
         return userRepo.existsByUsername(username);
     }
 
-    private boolean isEmailExists(String email) {
+    public boolean isEmailExists(String email) {
         return userRepo.existsByEmail(email);
     }
 
+    private boolean checkPermissions(User user) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication.getName().equals(user.getUsername()))
+            return true;
+
+        if (authentication.getAuthorities().equals("ROLE_ADMIN"))
+            return true;
+
+        return false;
+
+    }
+
+    protected User findUserByUsername(String username) {
+        return userRepo.findUserByUsername(username).orElseThrow(()->new EntityNotFoundException("Entity not found"));
+    }
 }

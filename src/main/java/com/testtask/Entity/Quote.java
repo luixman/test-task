@@ -22,7 +22,6 @@ public class Quote {
 
 
     @JoinColumn(name = "user_id")
-
     @ManyToOne()
     private User user;
 }

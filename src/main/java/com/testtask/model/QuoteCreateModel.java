@@ -2,12 +2,11 @@ package com.testtask.model;
 
 import lombok.*;
 
-@ToString
+@Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Getter
-@Setter
+
 public class QuoteCreateModel {
     String content;
 }
