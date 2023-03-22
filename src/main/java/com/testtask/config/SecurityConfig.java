@@ -8,6 +8,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.LogoutConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -25,18 +26,22 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity)
             throws Exception {
         return httpSecurity
-                .csrf().disable()
+                //.csrf().disable()
                 .authorizeRequests()
                 .antMatchers("/h2-console/**").permitAll()
                 .antMatchers(HttpMethod.GET,"/api/**").permitAll()
                 .antMatchers(HttpMethod.POST,"/api/v1/users").permitAll()
                 .antMatchers("/").permitAll()
+                .antMatchers("/login*").permitAll()
                 .anyRequest().authenticated()
                 .and()
+                .formLogin((form)-> form.loginPage("/login").permitAll())
+                .logout(LogoutConfigurer::permitAll)
                 .userDetailsService(jpaUserDetailService)
                 .headers().frameOptions().sameOrigin()
                 .and()
-                .httpBasic(Customizer.withDefaults())
+
+                //.httpBasic(Customizer.withDefaults())
                 .build();
     }
     @Bean
